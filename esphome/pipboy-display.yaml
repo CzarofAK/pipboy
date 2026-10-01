@@ -1,0 +1,279 @@
+# Pip-Boy Display – Step 1: display and touch test
+# Hardware: ESP32 DevKit (WROOM, no PSRAM) + 2.8" ILI9341 (320x240) with XPT2046 touch
+# No game data yet: Pip-Boy style layout with placeholders only.
+# Step 2 (MQTT link to the PyPipboy bridge) follows after the protocol test.
+
+substitutions:
+  name: pipboy-display
+  friendly_name: Pip-Boy Display
+  pip_green: "0x1BFF80"      # Pip-Boy green, adjust to taste
+  pip_dim: "0x0A4A26"        # dimmed green for borders / pressed state
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf
+
+# Shared base package (Wi-Fi, API, OTA, fallback AP, logger, restart, web_server)
+# Adjust path/branch to match the esphome_basics repo if needed
+packages:
+  basics: github://czarofak/esphome_basics/basics.yaml@main
+
+logger:
+  level: DEBUG               # for touch calibration; switch to INFO afterwards
+
+# ---------------------------------------------------------------
+# SPI bus (VSPI), shared by display and touch
+# ---------------------------------------------------------------
+spi:
+  clk_pin: GPIO18
+  mosi_pin: GPIO23
+  miso_pin: GPIO19
+
+# ---------------------------------------------------------------
+# Backlight (module LED pin)
+# Note: many modules draw more current on the LED pin than a GPIO should supply.
+# For the first test, tie LED directly to 3.3 V and comment out this block,
+# or switch it through a small NPN transistor / MOSFET.
+# ---------------------------------------------------------------
+output:
+  - platform: ledc
+    pin: GPIO25
+    id: backlight_pwm
+
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "Backlight"
+    id: backlight
+    restore_mode: ALWAYS_ON
+
+# ---------------------------------------------------------------
+# Display
+# ---------------------------------------------------------------
+display:
+  - platform: ili9xxx
+    model: ILI9341
+    id: tft
+    cs_pin: GPIO27
+    dc_pin: GPIO26
+    reset_pin: GPIO33
+    data_rate: 40MHz
+    rotation: 90             # landscape 320x240; use 270 if upside down
+    invert_colors: false     # set to true if colours appear inverted
+    auto_clear_enabled: false
+    update_interval: never   # LVGL handles redrawing
+
+# ---------------------------------------------------------------
+# Touch
+# Calibration: with logger at DEBUG, tap the four corners, read the raw
+# values (raw_x / raw_y) from the log and enter them below.
+# ---------------------------------------------------------------
+touchscreen:
+  - platform: xpt2046
+    id: touch
+    display: tft
+    cs_pin: GPIO32
+    interrupt_pin: GPIO35
+    update_interval: 50ms
+    threshold: 400
+    calibration:
+      x_min: 280
+      x_max: 3860
+      y_min: 340
+      y_max: 3860
+    transform:
+      swap_xy: true
+      mirror_x: false
+      mirror_y: false
+    on_touch:
+      - logger.log:
+          format: "Touch x=%d y=%d raw_x=%d raw_y=%d"
+          args: [touch.x, touch.y, touch.x_raw, touch.y_raw]
+
+# ---------------------------------------------------------------
+# Fonts (terminal-style monospace)
+# ---------------------------------------------------------------
+font:
+  - file: "gfonts://Share Tech Mono"
+    id: pip_font_s
+    size: 14
+  - file: "gfonts://Share Tech Mono"
+    id: pip_font_m
+    size: 18
+  - file: "gfonts://Share Tech Mono"
+    id: pip_font_l
+    size: 28
+
+# ---------------------------------------------------------------
+# LVGL user interface
+# ---------------------------------------------------------------
+lvgl:
+  displays: [tft]
+  touchscreens: [touch]
+  buffer_size: 25%           # no PSRAM -> partial buffer
+  color_depth: 16
+  bg_color: 0x000000
+  text_font: pip_font_s
+  theme:
+    label:
+      text_color: ${pip_green}
+    bar:
+      bg_color: ${pip_dim}
+      indicator:
+        bg_color: ${pip_green}
+    button:
+      bg_color: 0x000000
+      border_color: ${pip_green}
+      border_width: 1
+      radius: 0
+      shadow_width: 0
+      text_color: ${pip_green}
+      pressed:
+        bg_color: ${pip_dim}
+
+  pages:
+    - id: page_main
+      bg_color: 0x000000
+      widgets:
+        - tabview:
+            id: pip_tabs
+            position: TOP
+            size: 30
+            tabs:
+              # ---------------- STAT ----------------
+              - name: STAT
+                id: tab_stat
+                widgets:
+                  - label:
+                      id: lbl_name
+                      align: TOP_LEFT
+                      text_font: pip_font_m
+                      text: "SOLE SURVIVOR"
+                  - label:
+                      id: lbl_level
+                      align: TOP_RIGHT
+                      text_font: pip_font_m
+                      text: "LVL --"
+                  - label:
+                      align: TOP_LEFT
+                      y: 40
+                      text: "HP"
+                  - bar:
+                      id: bar_hp
+                      align: TOP_LEFT
+                      x: 40
+                      y: 42
+                      width: 200
+                      height: 12
+                      radius: 0
+                      min_value: 0
+                      max_value: 100
+                      value: 75
+                  - label:
+                      id: lbl_hp
+                      align: TOP_RIGHT
+                      y: 40
+                      text: "--/--"
+                  - label:
+                      align: TOP_LEFT
+                      y: 64
+                      text: "AP"
+                  - bar:
+                      id: bar_ap
+                      align: TOP_LEFT
+                      x: 40
+                      y: 66
+                      width: 200
+                      height: 12
+                      radius: 0
+                      min_value: 0
+                      max_value: 100
+                      value: 60
+                  - label:
+                      id: lbl_ap
+                      align: TOP_RIGHT
+                      y: 64
+                      text: "--/--"
+                  - label:
+                      id: lbl_rad
+                      align: TOP_LEFT
+                      y: 92
+                      text: "RAD  --"
+                  - label:
+                      id: lbl_weight
+                      align: TOP_LEFT
+                      y: 112
+                      text: "WGT  --/--"
+                  - button:
+                      id: btn_stimpak
+                      align: BOTTOM_LEFT
+                      width: 140
+                      height: 36
+                      widgets:
+                        - label:
+                            align: CENTER
+                            text: "STIMPAK"
+                      on_click:
+                        - logger.log: "Stimpak pressed (step 2: MQTT command)"
+                  - button:
+                      id: btn_radaway
+                      align: BOTTOM_RIGHT
+                      width: 140
+                      height: 36
+                      widgets:
+                        - label:
+                            align: CENTER
+                            text: "RADAWAY"
+                      on_click:
+                        - logger.log: "RadAway pressed (step 2: MQTT command)"
+
+              # ---------------- INV ----------------
+              - name: INV
+                id: tab_inv
+                widgets:
+                  - label:
+                      align: CENTER
+                      text_font: pip_font_m
+                      text: "INVENTORY\n(coming soon)"
+
+              # ---------------- DATA ----------------
+              - name: DATA
+                id: tab_data
+                widgets:
+                  - label:
+                      id: lbl_quest
+                      align: TOP_LEFT
+                      width: 290
+                      long_mode: WRAP
+                      text: "ACTIVE QUEST:\n--"
+                  - label:
+                      id: lbl_time
+                      align: BOTTOM_RIGHT
+                      text_font: pip_font_m
+                      text: "--:--"
+
+              # ---------------- RADIO ----------------
+              - name: RADIO
+                id: tab_radio
+                widgets:
+                  - label:
+                      id: lbl_radio
+                      align: TOP_LEFT
+                      text_font: pip_font_m
+                      text: "STATION: --"
+                  - button:
+                      id: btn_radio_off
+                      align: BOTTOM_MID
+                      width: 160
+                      height: 36
+                      widgets:
+                        - label:
+                            align: CENTER
+                            text: "RADIO OFF"
+                      on_click:
+                        - logger.log: "Radio off (step 2: MQTT command)"
