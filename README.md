@@ -23,8 +23,11 @@ Fallout 4 (PC)  ──Pip-Boy Companion protocol──▶  Bridge (Python, PyPip
 
 Why a bridge instead of parsing the protocol on the ESP32: the protocol sends a large
 binary database on connect, which a WROOM without PSRAM cannot hold. The bridge also
-keeps the display hardware interchangeable (e.g. a larger ESP32-P4 panel later) and
-makes the data available to Home Assistant.
+keeps the display hardware interchangeable (e.g. a larger ESP32-P4 panel later).
+
+The device is a **desktop controller** that sits next to the keyboard – not a
+wrist-worn Pip-Boy replica. It combines the touch display with physical hardware
+controls (e.g. rotary encoders and buttons).
 
 ## Repository layout
 
@@ -44,7 +47,18 @@ makes the data available to Home Assistant.
 - [ ] Protocol test: check that the game still answers the Companion protocol (see [`docs/protocol.md`](docs/protocol.md))
 - [ ] Step 2: bridge (PyPipboy → MQTT) and MQTT topics
 - [ ] Step 3: bind live values and buttons in ESPHome
-- [ ] Optional: Home Assistant automations (e.g. red light when HP is low), 3D-printed Pip-Boy enclosure
+
+## Planned features
+
+| Feature | Description | Depends on |
+| --- | --- | --- |
+| Settlement alerts | Bridge watches workshop data (population, happiness, defense) and raises an alert on the display when a settlement is under attack or happiness drops below a threshold | Bridge, protocol test (workshop data available?) |
+| Geiger counter | Piezo buzzer on the ESP32 clicks faster as radiation rises | Bridge (`pipboy/player/rad`), buzzer hardware |
+| Compass strip | Narrow compass bar at the top of the display, showing heading and direction to the active quest target | Bridge (player position/heading, quest marker) |
+| Hardware controls | Physical controls on the desktop controller (e.g. rotary encoders for tab switching and scrolling, push buttons for quick actions) | Free GPIOs, enclosure |
+| Large desktop panel | Second, larger desktop controller on an ESP32-P4 (7" or 10.1") including the local map view; uses the same bridge and MQTT topics | Bridge, map channel |
+
+Topic drafts for these features are in [`bridge/README.md`](bridge/README.md).
 
 ## Requirements
 

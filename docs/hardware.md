@@ -47,6 +47,23 @@ share the VSPI bus.
    toggle `mirror_x` / `mirror_y`.
 6. **Afterwards** set the logger level from `DEBUG` back to `INFO`.
 
+## Planned additions (desktop controller)
+
+GPIOs still free on the WROOM DevKit after display and touch:
+
+| GPIO | Type | Suggested use |
+| --- | --- | --- |
+| 4 | I/O | Piezo buzzer for the Geiger counter (LEDC, via NPN transistor) |
+| 13, 14 | I/O | Rotary encoder 1 A/B (tab switching) |
+| 16, 17 | I/O | Rotary encoder 2 A/B (scrolling) |
+| 21, 22 | I/O | Push buttons (quick actions) – or I²C if an expander is needed later |
+| 34, 36, 39 | Input only, no internal pull-ups | Encoder push switches / buttons with external pull-up resistors |
+
+If more controls are needed than pins are available, use an I²C GPIO expander
+(e.g. MCP23017) on GPIO21/22.
+
+The pin assignment is a proposal and will be fixed once the controls are chosen.
+
 ## Known uncertainties
 
 - The `tabview` widget syntax and the combination of display `rotation` with the touch
