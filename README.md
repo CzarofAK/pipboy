@@ -4,6 +4,12 @@ A small, standalone Pip-Boy-style touch display for Fallout 4 on PC. It shows li
 character data (HP, AP, radiation, carry weight, active quest, radio) and offers
 quick actions (Stimpak, RadAway, radio off) without opening the in-game Pip-Boy.
 
+> [!WARNING]
+> **Safety & liability / Sicherheit & Haftung** – Private hobby project, provided "as is" and used **at your own risk**.
+> Low-voltage hobby electronics and a bridge that sends commands to a running game. It may crash the game or corrupt save games – back up your saves.
+> Not affiliated with or endorsed by Bethesda Softworks or ZeniMax. *Fallout* and *Pip-Boy* are trademarks of their respective owners.
+> See [DISCLAIMER.md](DISCLAIMER.md) (EN/DE).
+
 ## Architecture
 
 ```
@@ -65,3 +71,7 @@ Topic drafts for these features are in [`bridge/README.md`](bridge/README.md).
 - Fallout 4 on PC (Steam), Pip-Boy App enabled in game settings
 - MQTT broker reachable from the gaming PC and the ESP32
 - ESPHome (uses the shared [`esphome_basics`](https://github.com/CzarofAK/esphome_basics) package)
+
+## License
+
+MIT, see [LICENSE](LICENSE). Use at your own risk – see [DISCLAIMER.md](DISCLAIMER.md).
